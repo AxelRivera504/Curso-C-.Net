@@ -74,6 +74,70 @@ namespace MiPrimeraApi.Controllers
             return CreatedAtAction("GetById", new { id = cliente.Id });
         }
 
+        [HttpGet("buscar")]
+        public IActionResult Buscar([FromQuery] string nombre)
+        {
+            if (string.IsNullOrWhiteSpace(nombre)) return BadRequest(new { mensaje = "Nombre requerido" });
+            var resultado = _clientes.Where(c => c.Nombre.Contains(nombre, StringComparison.OrdinalIgnoreCase)).ToList();
+            return Ok(resultado);
+        }
+
+        [HttpGet("activos")]
+        public IActionResult GetActivos()
+        {
+            var activos = _clientes.Where(c => c.Activo).ToList();
+            return Ok(activos);
+        }
+
+        [HttpPut("{id}")]
+        public IActionResult Update(int id, [FromBody] Cliente clienteActualizado)
+        {
+            if (clienteActualizado is null)
+                return BadRequest(new { mensaje = "Datos inválidos" });
+
+            var cliente = _clientes.FirstOrDefault(c => c.Id == id);    
+
+            if (cliente is null)
+                return BadRequest(new { mensaje = $"El cliente con ID {id} no existe" });
+
+            //Mala práctica: actualizamos los campos uno por uno
+            //Fase 3 AutoMapper
+            cliente.Email = clienteActualizado.Email;
+            cliente.Activo = clienteActualizado.Activo;
+            cliente.Nombre = clienteActualizado.Nombre;
+            cliente.Telefono = clienteActualizado.Telefono;
+
+            return Ok(cliente);
+        }
+
+        [HttpPatch("{id}")]
+        public IActionResult ToggleActivo(int id)
+        {
+            var cliente = _clientes.FirstOrDefault(c => c.Id == id);
+
+            if (cliente is null)
+                return BadRequest(new { mensaje = $"El cliente con ID {id} no existe" });
+
+            cliente.Activo = !cliente.Activo;
+
+            string estadoCliente = cliente.Activo ? "activado" : "desactivado";
+
+            return Ok(new { mensaje = $"Cliente {estadoCliente} correctamente", cliente});
+        }
+
+        [HttpDelete("{id}")]
+        public IActionResult Delete(int id)
+        {
+            var cliente = _clientes.FirstOrDefault(c => c.Id == id);
+
+            if (cliente is null)
+                return BadRequest(new { mensaje = $"El cliente con ID {id} no existe" });
+
+            _clientes.Remove(cliente);
+
+            return NoContent(); 
+        }
+
         //Tarea
         //Crear un endpoint con metodo http get donde busquen la información del cliente por su nombre.
         //Crear un endpoint con metodo http get donde traigan los clientes que esten activos
