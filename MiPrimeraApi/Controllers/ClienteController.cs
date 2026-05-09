@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using MiPrimeraApi.Infrastructure;
 using MiPrimeraApi.Models;
+using System.Threading.Tasks;
 
 namespace MiPrimeraApi.Controllers
 {
@@ -19,16 +22,31 @@ namespace MiPrimeraApi.Controllers
         };
         private static int _nextId = 4;
 
+        //Persistencia de datos
+        private readonly FacturacionContext _facturacionContext;
+
+        public ClienteController(FacturacionContext facturacionContext)
+        {
+            _facturacionContext = facturacionContext;
+        }
+
+
+
         // ──────────────────────────────────────────────────────
         // GET api/Cliente
         // Devuelve todos los clientes
         // ──────────────────────────────────────────────────────
         [HttpGet]
-        public IActionResult GetAll()
+        public async Task<IActionResult> GetAll()
         {
             // ⚠️ MALA PRÁCTICA: devolvemos la entidad directamente
             // Fase 3: se devuelve un DTO, no la entidad de BD
-            return Ok(_clientes);
+            //return Ok(_clientes);
+
+            List<Cliente>clientes = await _facturacionContext.Clientes.ToListAsync();
+            //select * from Cliente
+
+            return Ok(clientes);
         }
 
         // ──────────────────────────────────────────────────────
@@ -36,11 +54,17 @@ namespace MiPrimeraApi.Controllers
         // Devuelve un cliente por ID
         // ──────────────────────────────────────────────────────
         [HttpGet("{id}")]
-        public IActionResult GetById(int id)
+        public async Task<IActionResult> GetById(int id)
         {
             // ⚠️ MALA PRÁCTICA: lógica de búsqueda en el controller
             // Fase 3: esto va en el Repository
-            var cliente = _clientes.FirstOrDefault(x => x.Id == id);
+            //var cliente = _clientes.FirstOrDefault(x => x.Id == id);
+
+            //if (cliente is null)
+            //    return NotFound(new { mensaje = $"El cliente con id {id} no se encuentra entre nuestros clientes."} );
+
+            Cliente? cliente = await _facturacionContext.Clientes.FirstOrDefaultAsync(x => x.Id == id);
+            //select * from cliente where Id == id
 
             if (cliente is null)
                 return NotFound(new { mensaje = $"El cliente con id {id} no se encuentra entre nuestros clientes."} );
@@ -53,7 +77,7 @@ namespace MiPrimeraApi.Controllers
         // Crear un nuevo cliente
         // ──────────────────────────────────────────────────────
         [HttpPost]
-        public IActionResult Create([FromBody] Cliente cliente)
+        public async Task<IActionResult> Create([FromBody] Cliente cliente)
         {
             // ⚠️ MALA PRÁCTICA: validaciones manuales y básicas
             // Fase 3: se usa FluentValidation
@@ -66,12 +90,15 @@ namespace MiPrimeraApi.Controllers
             if (string.IsNullOrEmpty(cliente.Email))
                 return BadRequest(new { mensaje = "El email del cliente es requerido" });
 
-            cliente.Id = _nextId++;
+            //cliente.Id = _nextId++;
+            //_clientes.Add(cliente);
             cliente.Activo = true;
 
-            _clientes.Add(cliente);
-            //return Ok(cliente);
-            return CreatedAtAction("GetById", new { id = cliente.Id });
+            await _facturacionContext.Clientes.AddAsync(cliente);
+            await _facturacionContext.SaveChangesAsync();
+
+            return Ok(cliente);
+            //return CreatedAtAction("GetById", new { id = cliente.Id });
         }
 
         [HttpGet("buscar")]
