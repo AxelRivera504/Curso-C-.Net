@@ -30,8 +30,6 @@ namespace MiPrimeraApi.Controllers
             _facturacionContext = facturacionContext;
         }
 
-
-
         // ──────────────────────────────────────────────────────
         // GET api/Cliente
         // Devuelve todos los clientes
@@ -73,97 +71,230 @@ namespace MiPrimeraApi.Controllers
         }
 
         // ──────────────────────────────────────────────────────
+        // GET api/cliente/buscar?nombre=ana
+        // Buscar clientes por nombre
+        // ──────────────────────────────────────────────────────
+        [HttpGet("buscar")]
+        public async Task<IActionResult> Buscar([FromQuery] string nombre)
+        {
+            if (string.IsNullOrWhiteSpace(nombre))
+                return BadRequest(new { mensaje = "Debe ingresar un nombre para buscar." });
+
+            // EF Core traduce Contains a: WHERE Nombre LIKE '%ana%'
+            List<Cliente> resultado = await _facturacionContext.Clientes
+                .Where(c => c.Nombre.Contains(nombre))
+                .ToListAsync();
+
+            return Ok(resultado);
+        }
+
+        // ──────────────────────────────────────────────────────
+        // GET api/cliente/activos
+        // Devuelve solo los clientes activos
+        // ──────────────────────────────────────────────────────
+        [HttpGet("activos")]
+        public async Task<IActionResult> GetActivos()
+        {
+            List<Cliente> activos = await _facturacionContext.Clientes
+                .Where(c => c.Activo)
+                .ToListAsync();
+
+            return Ok(activos);
+        }
+
+        // ──────────────────────────────────────────────────────
         // POST api/cliente
         // Crear un nuevo cliente
         // ──────────────────────────────────────────────────────
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Cliente cliente)
         {
-            // ⚠️ MALA PRÁCTICA: validaciones manuales y básicas
-            // Fase 3: se usa FluentValidation
-            if (cliente == null)
-                return BadRequest();
+            if (cliente is null)
+                return BadRequest(new { mensaje = "El cuerpo de la petición no puede estar vacío." });
 
-            if(string.IsNullOrEmpty(cliente.Nombre))
-                return BadRequest(new { mensaje = "El nombre del cliente es requerido" });
+            if (string.IsNullOrWhiteSpace(cliente.Nombre))
+                return BadRequest(new { mensaje = "El nombre del cliente es requerido." });
 
-            if (string.IsNullOrEmpty(cliente.Email))
-                return BadRequest(new { mensaje = "El email del cliente es requerido" });
+            if (string.IsNullOrWhiteSpace(cliente.Email))
+                return BadRequest(new { mensaje = "El email del cliente es requerido." });
 
-            //cliente.Id = _nextId++;
-            //_clientes.Add(cliente);
+            // Verificar email duplicado en la BD
+            bool emailExiste = await _facturacionContext.Clientes
+                .AnyAsync(c => c.Email == cliente.Email);
+
+            if (emailExiste)
+                return Conflict(new { mensaje = $"Ya existe un cliente con el email '{cliente.Email}'." });
+
             cliente.Activo = true;
 
             await _facturacionContext.Clientes.AddAsync(cliente);
-            await _facturacionContext.SaveChangesAsync();
+            await _facturacionContext.SaveChangesAsync(); // INSERT INTO Clientes...
 
-            return Ok(cliente);
-            //return CreatedAtAction("GetById", new { id = cliente.Id });
+            return StatusCode(201, cliente);
         }
 
-        [HttpGet("buscar")]
-        public IActionResult Buscar([FromQuery] string nombre)
-        {
-            if (string.IsNullOrWhiteSpace(nombre)) return BadRequest(new { mensaje = "Nombre requerido" });
-            var resultado = _clientes.Where(c => c.Nombre.Contains(nombre, StringComparison.OrdinalIgnoreCase)).ToList();
-            return Ok(resultado);
-        }
-
-        [HttpGet("activos")]
-        public IActionResult GetActivos()
-        {
-            var activos = _clientes.Where(c => c.Activo).ToList();
-            return Ok(activos);
-        }
-
+        // ──────────────────────────────────────────────────────
+        // PUT api/cliente/5
+        // Actualizar un cliente completo
+        // ──────────────────────────────────────────────────────
         [HttpPut("{id}")]
-        public IActionResult Update(int id, [FromBody] Cliente clienteActualizado)
+        public async Task<IActionResult> Update(int id, [FromBody] Cliente clienteActualizado)
         {
             if (clienteActualizado is null)
-                return BadRequest(new { mensaje = "Datos inválidos" });
+                return BadRequest(new { mensaje = "Datos inválidos." });
 
-            var cliente = _clientes.FirstOrDefault(c => c.Id == id);    
+            Cliente? cliente = await _facturacionContext.Clientes
+                .FirstOrDefaultAsync(c => c.Id == id);
 
             if (cliente is null)
-                return BadRequest(new { mensaje = $"El cliente con ID {id} no existe" });
+                return NotFound(new { mensaje = $"El cliente con ID {id} no fue encontrado." });
 
-            //Mala práctica: actualizamos los campos uno por uno
-            //Fase 3 AutoMapper
-            cliente.Email = clienteActualizado.Email;
-            cliente.Activo = clienteActualizado.Activo;
+            // ⚠️ MALA PRÁCTICA: campo a campo
+            // Fase 3: AutoMapper hace esto en una línea
             cliente.Nombre = clienteActualizado.Nombre;
+            cliente.Email = clienteActualizado.Email;
             cliente.Telefono = clienteActualizado.Telefono;
+            cliente.Activo = clienteActualizado.Activo;
+
+            await _facturacionContext.SaveChangesAsync(); // UPDATE Clientes SET...
 
             return Ok(cliente);
         }
 
+        // ──────────────────────────────────────────────────────
+        // PATCH api/cliente/5
+        // Toggle activo / inactivo
+        // ──────────────────────────────────────────────────────
         [HttpPatch("{id}")]
-        public IActionResult ToggleActivo(int id)
+        public async Task<IActionResult> ToggleActivo(int id)
         {
-            var cliente = _clientes.FirstOrDefault(c => c.Id == id);
+            Cliente? cliente = await _facturacionContext.Clientes
+                .FirstOrDefaultAsync(c => c.Id == id);
 
             if (cliente is null)
-                return BadRequest(new { mensaje = $"El cliente con ID {id} no existe" });
+                return NotFound(new { mensaje = $"El cliente con ID {id} no fue encontrado." });
 
             cliente.Activo = !cliente.Activo;
 
+            await _facturacionContext.SaveChangesAsync();
+
             string estadoCliente = cliente.Activo ? "activado" : "desactivado";
 
-            return Ok(new { mensaje = $"Cliente {estadoCliente} correctamente", cliente});
+            return Ok(new { mensaje = $"Cliente {estadoCliente} correctamente.", cliente });
         }
 
+        // ──────────────────────────────────────────────────────
+        // DELETE api/cliente/5
+        // Eliminar un cliente
+        // ──────────────────────────────────────────────────────
         [HttpDelete("{id}")]
-        public IActionResult Delete(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            var cliente = _clientes.FirstOrDefault(c => c.Id == id);
+            Cliente? cliente = await _facturacionContext.Clientes
+                .FirstOrDefaultAsync(c => c.Id == id);
 
             if (cliente is null)
-                return BadRequest(new { mensaje = $"El cliente con ID {id} no existe" });
+                return NotFound(new { mensaje = $"El cliente con ID {id} no fue encontrado." });
 
-            _clientes.Remove(cliente);
+            _facturacionContext.Clientes.Remove(cliente);
+            await _facturacionContext.SaveChangesAsync(); // DELETE FROM Clientes WHERE Id = @id
 
-            return NoContent(); 
+            return NoContent(); // 204 — éxito sin body
         }
+
+
+        //// ──────────────────────────────────────────────────────
+        //// POST api/cliente
+        //// Crear un nuevo cliente
+        //// ──────────────────────────────────────────────────────
+        //[HttpPost]
+        //public async Task<IActionResult> Create([FromBody] Cliente cliente)
+        //{
+        //    // ⚠️ MALA PRÁCTICA: validaciones manuales y básicas
+        //    // Fase 3: se usa FluentValidation
+        //    if (cliente == null)
+        //        return BadRequest();
+
+        //    if(string.IsNullOrEmpty(cliente.Nombre))
+        //        return BadRequest(new { mensaje = "El nombre del cliente es requerido" });
+
+        //    if (string.IsNullOrEmpty(cliente.Email))
+        //        return BadRequest(new { mensaje = "El email del cliente es requerido" });
+
+        //    //cliente.Id = _nextId++;
+        //    //_clientes.Add(cliente);
+        //    cliente.Activo = true;
+
+        //    await _facturacionContext.Clientes.AddAsync(cliente);
+        //    await _facturacionContext.SaveChangesAsync();
+
+        //    return Ok(cliente);
+        //    //return CreatedAtAction("GetById", new { id = cliente.Id });
+        //}
+
+        //[HttpGet("buscar")]
+        //public IActionResult Buscar([FromQuery] string nombre)
+        //{
+        //    if (string.IsNullOrWhiteSpace(nombre)) return BadRequest(new { mensaje = "Nombre requerido" });
+        //    var resultado = _clientes.Where(c => c.Nombre.Contains(nombre, StringComparison.OrdinalIgnoreCase)).ToList();
+        //    return Ok(resultado);
+        //}
+
+        //[HttpGet("activos")]
+        //public IActionResult GetActivos()
+        //{
+        //    var activos = _clientes.Where(c => c.Activo).ToList();
+        //    return Ok(activos);
+        //}
+
+        //[HttpPut("{id}")]
+        //public IActionResult Update(int id, [FromBody] Cliente clienteActualizado)
+        //{
+        //    if (clienteActualizado is null)
+        //        return BadRequest(new { mensaje = "Datos inválidos" });
+
+        //    var cliente = _clientes.FirstOrDefault(c => c.Id == id);    
+
+        //    if (cliente is null)
+        //        return BadRequest(new { mensaje = $"El cliente con ID {id} no existe" });
+
+        //    //Mala práctica: actualizamos los campos uno por uno
+        //    //Fase 3 AutoMapper
+        //    cliente.Email = clienteActualizado.Email;
+        //    cliente.Activo = clienteActualizado.Activo;
+        //    cliente.Nombre = clienteActualizado.Nombre;
+        //    cliente.Telefono = clienteActualizado.Telefono;
+
+        //    return Ok(cliente);
+        //}
+
+        //[HttpPatch("{id}")]
+        //public IActionResult ToggleActivo(int id)
+        //{
+        //    var cliente = _clientes.FirstOrDefault(c => c.Id == id);
+
+        //    if (cliente is null)
+        //        return BadRequest(new { mensaje = $"El cliente con ID {id} no existe" });
+
+        //    cliente.Activo = !cliente.Activo;
+
+        //    string estadoCliente = cliente.Activo ? "activado" : "desactivado";
+
+        //    return Ok(new { mensaje = $"Cliente {estadoCliente} correctamente", cliente});
+        //}
+
+        //[HttpDelete("{id}")]
+        //public IActionResult Delete(int id)
+        //{
+        //    var cliente = _clientes.FirstOrDefault(c => c.Id == id);
+
+        //    if (cliente is null)
+        //        return BadRequest(new { mensaje = $"El cliente con ID {id} no existe" });
+
+        //    _clientes.Remove(cliente);
+
+        //    return NoContent(); 
+        //}
 
         //Tarea
         //Crear un endpoint con metodo http get donde busquen la información del cliente por su nombre.
@@ -187,5 +318,7 @@ namespace MiPrimeraApi.Controllers
         // ──────────────────────────────────────────────────────
         //[HttpDelete("{id}")]
         //return NoContent(); // 204 — éxito sin body
+
+
     }
 }
