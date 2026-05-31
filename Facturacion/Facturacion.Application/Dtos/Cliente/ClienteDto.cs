@@ -1,11 +1,11 @@
-﻿namespace Facturacion.Domain.Entities
+﻿namespace Facturacion.Application.Dtos.Cliente
 {
-    public class Cliente
+    public class ClienteDto
     {
         public int Id { get; set; }
         public string Nombre { get; set; }
         public string Email { get; set; }
         public string Telefono { get; set; }
-        public bool Activo { get; set; } = true;
+        public bool Activo { get; set; }
     }
 }

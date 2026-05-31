@@ -1,8 +1,7 @@
-﻿namespace Facturacion.Domain.Entities
+namespace Facturacion.Application.Dtos.Producto
 {
-    public class Producto
+    public class UpdateProductoDto
     {
-        public int Id { get; set; }
         public string Nombre { get; set; }
         public string Categoria { get; set; }
         public decimal Precio { get; set; }
