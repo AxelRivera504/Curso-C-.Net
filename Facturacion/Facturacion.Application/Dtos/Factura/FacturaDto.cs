@@ -1,3 +1,5 @@
+using Facturacion.Application.Dtos.FacturaDetalle;
+
 namespace Facturacion.Application.Dtos.Factura
 {
     public class FacturaDto
@@ -8,5 +10,6 @@ namespace Facturacion.Application.Dtos.Factura
         public DateTime FechaFactura { get; set; }
         public decimal Total { get; set; }
         public string Estado { get; set; }
+        public List<FacturaDetalleDto> Detalles { get; set; } = new();
     }
 }

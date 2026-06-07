@@ -13,8 +13,8 @@ namespace Facturacion.Application.Validators.Factura
             RuleFor(x => x.FechaFactura)
                 .NotEmpty().WithMessage("La fecha de la factura es requerida");
 
-            RuleFor(x => x.Total)
-                .GreaterThan(0).WithMessage("El total de la factura debe ser mayor a 0");
+            RuleFor(x => x.Detalles)
+                .NotEmpty().WithMessage("La factura debe tener al menos un detalle");
         }
     }
 }

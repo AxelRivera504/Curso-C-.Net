@@ -11,6 +11,7 @@ namespace Facturacion.Domain.Interfaces
         Task<Factura> CreateAsync(Factura factura);
         Task<Factura> UpdateAsync(int id, Factura factura);
         Task<Factura> UpdateEstadoAsync(int id, string estado);
+        Task RecalcularTotalAsync(int id, decimal total);
         Task DeleteAsync(int id);
     }
 }

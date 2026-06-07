@@ -10,7 +10,7 @@ namespace Facturacion.Application.Interfaces
         Task<List<FacturaDto>> GetByEstadoAsync(string estado);
         Task<FacturaDto> CreateAsync(CreateFacturaDto facturaDto);
         Task<FacturaDto> UpdateAsync(int id, UpdateFacturaDto facturaDto);
-        Task<FacturaDto> UpdateEstadoAsync(int id, string estado);
+        Task UpdateEstadoAsync(int id, string estado);
         Task DeleteAsync(int id);
     }
 }

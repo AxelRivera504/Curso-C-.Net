@@ -39,8 +39,11 @@ namespace Facturacion.Application.UseCases
 
         public async Task<FacturaDto> CreateAsync(CreateFacturaDto facturaDto)
         {
-            var factura = await _facturaRepository.CreateAsync(facturaDto.ToEntity());
-            return factura.ToDto();
+            var factura = facturaDto.ToEntity();
+            factura.Total = factura.Detalles.Sum(d => d.Subtotal);
+            var facturaCreada = await _facturaRepository.CreateAsync(factura);
+            var facturaCompleta = await _facturaRepository.GetByIdAsync(facturaCreada.Id);
+            return facturaCompleta.ToDto();
         }
 
         public async Task<FacturaDto> UpdateAsync(int id, UpdateFacturaDto facturaDto)
@@ -49,10 +52,9 @@ namespace Facturacion.Application.UseCases
             return factura.ToDto();
         }
 
-        public async Task<FacturaDto> UpdateEstadoAsync(int id, string estado)
+        public async Task UpdateEstadoAsync(int id, string estado)
         {
-            var factura = await _facturaRepository.UpdateEstadoAsync(id, estado);
-            return factura.ToDto();
+            await _facturaRepository.UpdateEstadoAsync(id, estado);
         }
 
         public async Task DeleteAsync(int id)

@@ -6,8 +6,6 @@ using Facturacion.Infrastructure.Context;
 using Facturacion.Infrastructure.Repositories;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Migrations;
-using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +17,7 @@ builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddSwaggerGen(c =>
 //    {
 //        c.SwaggerDoc("V1", new() { 
-//            Title = "Facturación Api - Clean Architecture",
+//            Title = "Facturaciï¿½n Api - Clean Architecture",
 //            Version = "V1",
 //            Description = "NetVerk - Curso C# .Net"
 //        });
@@ -33,11 +31,13 @@ builder.Services.AddDbContext<FacturacionContext>(options => options.UseSqlServe
 
 //Repositories
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
+builder.Services.AddScoped<IFacturaRepository, FacturaRepository>();
+builder.Services.AddScoped<IFacturaDetalleRepository, FacturaDetalleRepository>();
 
 //Services
 builder.Services.AddScoped<IClienteService, ClienteService>();
-//builder.Services.AddScoped<IProductoService, ProductoService>();
-//builder.Services.AddScoped<IFacturaService, FacturaService>();
+builder.Services.AddScoped<IFacturaService, FacturaService>();
+builder.Services.AddScoped<IFacturaDetalleService, FacturaDetalleService>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<CreateClienteValidatorDto>();
 
@@ -63,15 +63,15 @@ app.Run();
 /*
  Les comparto los comandos para ejecutar migraciones.
 
---Añadir migración indicando el proyecto de infrastructure ya sea Local, Client o Admin.
+--Aï¿½adir migraciï¿½n indicando el proyecto de infrastructure ya sea Local, Client o Admin.
 add-migration IsActiveClient -Project Local.Infrastructure -StartupProject Local.WebApi
 
---Ejecutar la migración al proyecto indicando el proyecto de infrastructure ya sea Local, Client o Admin.
+--Ejecutar la migraciï¿½n al proyecto indicando el proyecto de infrastructure ya sea Local, Client o Admin.
 Update-Database -Project Local.Infrastructure -StartupProject Local.WebApi
  
---Remover la ultima migración creada en el proyecto indicando el proyecto de infrastructure ya sea Local, Client o Admin.
+--Remover la ultima migraciï¿½n creada en el proyecto indicando el proyecto de infrastructure ya sea Local, Client o Admin.
 remove-migration -Project Local.Infrastructure -StartupProject Local.WebApi
  
---Recuerden siempre colocar en -StartupProject el proyecto WebApi donde necesiten ejecutar la migración
+--Recuerden siempre colocar en -StartupProject el proyecto WebApi donde necesiten ejecutar la migraciï¿½n
 
  */
